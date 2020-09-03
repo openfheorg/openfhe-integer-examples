@@ -7,7 +7,7 @@ CXX_FLAGS = -g -I"src" -std=c++11 -O3  -march=native -Ofast -fopenmp
 #CXX_FLAGS = -g -I"src" -std=c++11 
 INCLUDES = $(SRC)/debug.h
 
-PALISADE_INCLUDES = -I/usr/local/include/palisade -I/usr/local/include/palisade/core -I/usr/local/include/palisade/pke -I/usr/local/include/palisade/signature
+PALISADE_INCLUDES = -I/usr/local/include/palisade -I/usr/local/include/palisade/core -I/usr/local/include/palisade/pke 
 
 PALISADE_LIBS = -fopenmp /usr/local/lib/libPALISADEcore.so.1  /usr/local/lib/libPALISADEpke.so.1 
  
