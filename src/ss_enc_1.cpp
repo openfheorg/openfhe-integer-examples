@@ -1,6 +1,6 @@
-/*
- * C++ program implements the Rabin-Karp method for string matching.
- * initial version of this code comes from 
+/* PALISADE C++ program implements the Rabin-Karp method for string matching using
+ * encrypted computation
+ * plaintext version of this code comes from 
  * https://www.sanfoundry.com/cpp-program-implement-rabin-karp-method-for-string-matching
  * modified by D. Cousins Dualitytech.com
 
