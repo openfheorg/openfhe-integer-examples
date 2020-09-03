@@ -7,17 +7,17 @@ CXX_FLAGS = -g -I"src" -std=c++11 -O3  -march=native -Ofast -fopenmp
 #CXX_FLAGS = -g -I"src" -std=c++11 
 INCLUDES = $(SRC)/debug.h
 
-PALISADE_INCLUDES = -I/usr/local/include/palisade -I/usr/local/include/palisade/core -I/usr/local/include/palisade/pke
+PALISADE_INCLUDES = -I/usr/local/include/palisade -I/usr/local/include/palisade/core -I/usr/local/include/palisade/pke -I/usr/local/include/palisade/signature
 
 PALISADE_LIBS = -fopenmp /usr/local/lib/libPALISADEcore.so.1  /usr/local/lib/libPALISADEpke.so.1 
  
 .PHONY: all
 
-all:  $(BIN)/ss_plain
+all:  $(BIN)/ss_plain $(BIN)/ss_enc_1
 
 .PHONY: clean
 clean:
-	rm -f $(SRC)/*~ $(SRC)/*.o $(BIN)/ss_plain
+	rm -f $(SRC)/*~ $(SRC)/*.o $(BIN)/ss_plain $(BIN)/ss_enc_1
 
 
 #recipie for .o from .cpp and associated .h
@@ -30,10 +30,16 @@ clean:
 $(SRC)/ss_plain.o: $(SRC)/ss_plain.cpp  $(INCLUDES)
 	g++ $(CXX_FLAGS) -c $< -o $@ $(PALISADE_INCLUDES)
 
+$(SRC)/ss_enc_1.o: $(SRC)/ss_enc_1.cpp  $(INCLUDES)
+	g++ $(CXX_FLAGS) -c $< -o $@ $(PALISADE_INCLUDES)
+
 # common modules
 
 
 #final  executables
 $(BIN)/ss_plain: $(SRC)/ss_plain.o
 	g++  $(GXX_LINK_FLAGS) $^ -o $(BIN)/ss_plain $(PALISADE_LIBS)
+
+$(BIN)/ss_enc_1: $(SRC)/ss_enc_1.o
+	g++  $(GXX_LINK_FLAGS) $^ -o $(BIN)/ss_enc_1 $(PALISADE_LIBS)
 
