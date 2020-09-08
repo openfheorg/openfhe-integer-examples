@@ -12,6 +12,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <algorithm>
 #include "debug.h"
 #include "palisade.h"
 using namespace std;
@@ -64,7 +65,7 @@ void get_input_from_file(vecChar& a, string fname) {
 }
      
      
-void search(vecChar &pat, vecChar &txt, int ps) {
+vecInt search(vecChar &pat, vecChar &txt, int ps) {
   long p(ps);
   DEBUG_FLAG(true);
   int M = pat.size();
@@ -81,13 +82,18 @@ void search(vecChar &pat, vecChar &txt, int ps) {
   // The value of h would be "pow(d, M-1)%p"
   for (i = 0; i < M-1; i++) {
 	h = (h*d)%p;
+	DEBUGEXP(h);
   }
+  DEBUG(" hfinal: "<<h);
+
   // Calculate the hash value of pattern and first window of text
   for (i = 0; i < M; i++) {
 	ph = (d * ph + pat[i]) % p;
 	th = (d * th + txt[i]) % p;
   }
-     
+  DEBUG(" initial ph: "<<ph);
+  DEBUG(" initial th: "<<th);
+  vecInt pres(0);
   // Slide the pattern over text one by one
   for (i = 0; i <= N - M; i++) {
 	
@@ -101,7 +107,8 @@ void search(vecChar &pat, vecChar &txt, int ps) {
 	  }
 	  if (j == M) { // if ph == t and pat[0...M-1] = txt[i, i+1, ...i+M-1]
 
-		cout<<"Pattern found at index "<< i << endl;
+		//cout<<"Pattern found at index "<< i << endl;
+		pres.push_back(i);
 		nfound++;
 	  }
 	}
@@ -110,83 +117,121 @@ void search(vecChar &pat, vecChar &txt, int ps) {
 	// add trailing digit
 	if ( i < N - M ) {
 	  th = (d * (th - txt[i] * h) + txt[i + M]) % p;
-     
+
 	  // We might get negative value of t, converting it to positive
 	  if (th < 0) {
 		th = (th + p);
 	  }
+
+	  //cout<<" "<<th;
 	}
   } //end for
+  //cout<<endl;
   cout<<"total occurances " <<nfound<<endl;
+  return pres;
 }
      
 
-CT encrypt_repeated_integer(CryptoContext<DCRTPoly> &cc, LPPublicKey<DCRTPoly> &pk, int64_t in, size_t n){
+CT encrypt_repeated_integer(CryptoContext<DCRTPoly> &cc, LPPublicKey<DCRTPoly> &pk,  int64_t in, size_t n){
   
   vecInt v_in(0);
   for (auto i = 0; i < n; i++){
-	v_in.push_back(0);
+	v_in.push_back(in);
   }
   PT pt= cc->MakePackedPlaintext(v_in);
   CT ct = cc->Encrypt(pk, pt);
+
   return ct;
-}	
+}
+
+CT encMultD(CryptoContext<DCRTPoly> &cc, CT in){
+  if (d !=256){
+	cout <<"error d not 256"<<endl;
+	exit(-1);
+  }
+  auto tmp(in);
+  for (auto i = 0; i< 8; i++ ){
+	tmp = cc->EvalAdd(tmp, tmp);
+  }
+  
+  return(tmp);
+}
      
-vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, vecCT &epat, vecCT &etxt) {
-  DEBUG_FLAG(true);
+vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, LPPrivateKey<DCRTPoly> &sk, vecCT &epat, vecCT &etxt, int ps) {
+
+  long p(ps);
+  DEBUG_FLAG(false);
   int M = epat.size();
   DEBUGEXP(M);
   int N = etxt.size();
   DEBUGEXP(N);
   int i, j;
 
-  size_t nrep(1);
-
+  PT dummy;
+  
+  size_t nrep(cc->GetRingDimension());
+  DEBUG("encrypting small ct");
   CT phct = encrypt_repeated_integer(cc, pk, 0, nrep);  // hash value for pattern
   CT thct = encrypt_repeated_integer(cc, pk, 0, nrep);  // hash value for txt
-  CT hct = encrypt_repeated_integer(cc, pk, 1, nrep);  // encrypted h
-  CT dct = encrypt_repeated_integer(cc, pk, d, nrep);  // encrypted d
+
+  CT dhct = encrypt_repeated_integer(cc, pk, d, nrep);  // d
 
   int nfound = 0;
-     
+  DEBUG("encrypting hct");     
   // The value of h would be "pow(d, M-1)%p"
+  long h = 1;
   for (i = 0; i < M-1; i++) {
-	hct = cc->ComposedEvalMult(hct, dct);
+	h = (h*d)%p;
   }
+  CT hct = encrypt_repeated_integer(cc, pk, h, nrep);  // encrypted h
+  //cc->Decrypt(sk, hct, &dummy);
+  //cout<<" hct: "<<dummy<<endl;
 
+  DEBUG("encrypting first hashes" );     
   // Calculate the hash value of pattern and first window of text
   for (i = 0; i < M; i++) {
-	auto tmp = cc->EvalAdd(phct,epat[i]);
-	phct = cc->ComposedEvalMult(tmp, dct);
-	tmp = cc->EvalAdd(thct,etxt[i]);
-	thct = cc->ComposedEvalMult(tmp, dct);
+	auto tmp = encMultD(cc, phct);	
+	phct = cc->EvalAdd(tmp, epat[i]);
+
+	tmp = encMultD(cc, thct);
+	thct = cc->EvalAdd(tmp, etxt[i]);
   }
 
-  vecCT eresult(0);
+  vecCT eres(0);
   // Slide the pattern over text one by one
+  DEBUG("sliding" );     
   for (i = 0; i <= N - M; i++) {
 	cout<<i<< '\r'<<flush;
 	
 	// Check the hash values of current window of text and pattern
 	// If the hash values match then only check for characters on by one
 	// subtract the two hashes, zero is equality
-
-	eresult.push_back(cc->EvalSub(phct, thct));
+	DEBUG("sub" );     
+	eres.push_back(cc->EvalSub(phct, thct));
      
 	// Calculate hash value for next window of text: Remove leading digit,
 	// add trailing digit
 	if ( i < N - M ) {
-	  
+	  DEBUG("rehash" );     
 	  //th = (d * (th - txt[i] * h) + txt[i + M]) % p;
-	  thct = cc->EvalAdd(cc->ComposedEvalMult(dct,
-											  cc->EvalSub(thct,
-														  cc->ComposedEvalMult(etxt[i], hct)
-														  )
-											  ), etxt[i+M]
-						 );
+	  auto tmp = encMultD(cc,
+						  cc->EvalSub(thct,
+									  cc->EvalMult(etxt[i], hct)
+									  )
+						  );
+
+	  thct = cc->EvalAdd(tmp, etxt[i+M] );
+	  // //check for overflow during testing
+	  // cc->Decrypt(sk, thct, &dummy);
+	  // auto test = dummy->GetPackedValue();
+	  // if (test[1] != 0) {
+	  // 	cout<<"overflow!!"<<endl;
+	  // 	exit(-1);
+	  // }
 	}
+
   } //end for
-  return eresult;
+  return eres;
 }
      
 int main()
@@ -195,42 +240,54 @@ int main()
   vecChar pat;
   string infilename;
 
-  cout<<sizeof(int)<<endl;
-  cout<<sizeof(long)<<endl;
-  
   cout<<"Enter file for Text:";
   //cin >> infilename;
   //infilename = "data/alice.txt";
-  infilename = "data/warandpeace.txt";
+  //infilename = "data/warandpeace.txt";
+  infilename = "data/annakarenina.txt";
   get_input_from_file(txt, infilename);
 
+  //cout<<"Enter buffer size:";
+  unsigned int maxNBatches(0);
+  //cin>> maxNBatches;
+  maxNBatches = 64;
+  cout << "batching to "<<maxNBatches<< " characters max"<<endl;
+  
+  //txt.resize(textSize);
+  
   cout<<"Enter Pattern to Search:";
-  get_input_from_term(pat);
-
+  //get_input_from_term(pat);
+  pat = {'A', 'n', 'n', 'a'};
+  
   int p = 786433; //plaintext prime modulus
+  //int p = 65537;
 
   cout<<"p "<<p<<endl;
   TIC(auto t1);
-  search(pat, txt, p);
+
+  auto presult = search(pat, txt, p);
   auto plain_time_ms = TOC_MS(t1);
   cout<< "Plaintext execution time "<<plain_time_ms<<" mSec."<<endl;
 
-  cout <<"setting up BGV RNS crypto system"<<endl;
-  
+  cout <<"setting up BFV RNS crypto system"<<endl;
+
 
   uint32_t plaintextModulus = p;
-  uint32_t multDepth = 50;
+  uint32_t multDepth = 32;  //n search char - 4
+
+  //uint32_t multDepth = 16; //note this is the biggst we can have in 32k
   double sigma = 3.2;
   SecurityLevel securityLevel = HEStd_128_classic;
-  
+
+  // Instantiate the crypto context
   CryptoContext<DCRTPoly> cc =
-      CryptoContextFactory<DCRTPoly>::genCryptoContextBGVrns(
-          multDepth, plaintextModulus, securityLevel, sigma, 2, OPTIMIZED, HYBRID, 0, 0, 0, 0, 0, 0, MANUAL);
+	CryptoContextFactory<DCRTPoly>::genCryptoContextBFVrns(
+		plaintextModulus, securityLevel, sigma, 0, multDepth, 0, OPTIMIZED);
+
 	
   // Enable features that you wish to use
   cc->Enable(ENCRYPTION);
   cc->Enable(SHE);
-  cc->Enable(LEVELEDSHE);
 
   cout<<"Step 2 - Key Generation"<<endl;
   
@@ -240,49 +297,86 @@ int main()
   
   // Generate the relinearization key
   cc->EvalMultKeyGen(keyPair.secretKey);
-  
+
+  // note we do not use rotation in this example so we don't need rotation keys
+  // but make them anyway 
+  // Generate the rotation evaluation keys
+  cc->EvalAtIndexKeyGen(keyPair.secretKey, {1, 2, -1, -2}); 
+
   cout<<"Step 3 - Encryption"<<endl;  
 
-  auto ringsize = cc->GetRingDimension();
-  cout << "ringsize = "<<ringsize << endl;
-									 
-
-  //encrypt the pattern
-  vecInt vin(0);
-  vecCT epat(0);
-  unsigned int j(0);
-  for (auto ch: pat) {
-	cout<<j<< '\r'<<flush;
-	j++;
-	vin.push_back(ch);
-	PT pt= cc->MakePackedPlaintext(vin);
-	vin.clear();
-	CT ct = cc->Encrypt(keyPair.publicKey, pt);
-	epat.push_back(ct);
-  }	
+  cout<<"Step 3.1 - Encrypt text"<<endl;  
 
   //encrypt the text
-  unsigned int nbatch = ceil(txt.size()/ringsize);
+  auto ringsize = cc->GetRingDimension();
+  cout << "ringsize = "<<ringsize << endl;
+  cout << "txt size = "<<txt.size() << endl;
+  unsigned int nbatch = int(ceil(float(txt.size())/float(ringsize)))+1;
   cout << "can store "<<nbatch <<" batches in the ct"<<endl;
-	
-  //for now lets only do the first 64 characters
 
+  if (nbatch > maxNBatches) {
+	cout<<"have to limit number of batches to "<<maxNBatches<<endl;
+	nbatch = maxNBatches;
+  }
+  
+
+  //need to encrypt the text in batches, each one consists of
+  //nbatch points. the next batch starts at nbatch-M 
+  //so each CT in the vecCT has ringsize entries.
+  // vecCT[0] has characters {0, nbatch-M, 2(nbatch-M) etc..}
+  // vecCT[1] has characters {1, 1+(nbatch-M), 1+2(nbatch-M) etc..}
+  //
+
+  the mapping isn't exactly right we are missing somehting at the end
+  
   vecCT etxt(0);
   auto pt_len(0);
-  for (auto i = 0; i < 64; i++) {
-	cout<<i<< '\r'<<flush;
+  vecInt offset(0);
+  auto M(pat.size());
+  for(auto bat = 0; bat < ringsize; bat++){
+	offset.push_back(bat*(nbatch-M+1));
+  }
 
-	vin.push_back(txt[i]);
+  vecInt vin(0);
+  for (auto i = 0; i < nbatch; i++) {	
+	cout<<i<< '\r'<<flush;
+	//build a vector out of the batches 
+	for(auto bat = 0; bat < ringsize; bat++){
+	  if (i+offset[bat] >= txt.size()) {
+		vin.push_back('\0'); //null terminate
+	  } else {
+		vin.push_back(txt[i+offset[bat]]);
+	  }
+	}
 	Plaintext pt= cc->MakePackedPlaintext(vin);
 	pt_len = pt->GetLength();
 	vin.clear();
 	CT ct = cc->Encrypt(keyPair.publicKey, pt);
 	etxt.push_back(ct);
   }	
+
+  cout<<"Step 3.2 - Encrypt pattern"<<endl;  
+  //encrypt the pattern
+  // we copy the pattern over the entire ring
+  vecCT epat(0);
+  unsigned int j(0);
+  for (auto ch: pat) {
+	cout<<j<< '\r'<<flush;
+	j++;
+	for(auto bat = 0; bat < ringsize; bat++){
+	  vin.push_back(ch);
+	}
+	PT pt= cc->MakePackedPlaintext(vin);
+	vin.clear();
+	CT ct = cc->Encrypt(keyPair.publicKey, pt);
+	epat.push_back(ct);
+  }	
+
   cout<<"Step 4 - Encrypted string search"<<endl;  
 
   TIC(auto t2);
-  vecCT eresult = encrypted_search(cc, keyPair.publicKey, epat, etxt);
+  //secret key only for debug. remove it after
+  vecCT eresult = encrypted_search(cc, keyPair.publicKey, keyPair.secretKey, epat, etxt, p);
   auto encrypted_time_ms = TOC_MS(t2);
 		  cout<< "Encrypted execution time "<<encrypted_time_ms<<" mSec."<<endl;  
 
@@ -297,6 +391,42 @@ int main()
 	vecResult.push_back(ptresult);
   }
 
-  cout<<"Result "<<vecResult << endl;
+  int i(0);
+  vecInt foundloc(0);
+  for (auto i = 0; i < vecResult.size(); i++) {
+	auto unpackedVal = vecResult[i]->GetPackedValue();
+	for (auto j = 0; j< ringsize; j++) {
+	  if (unpackedVal[j] == 0) {
+		auto loc = i + offset[j];
+		foundloc.push_back(loc);
+	  }
+	}
+  }
+
+  sort(foundloc.begin(), foundloc.end());
+  cout<<"total occurances "<<foundloc.size()<<endl;
+
+  if (presult.size() != foundloc.size()){
+	cout<<"encrypted and plaintext results do not match"<<endl; 
+	
+	auto smaller = min(presult.size(), foundloc.size());
+	
+	for (auto i = 0; i< smaller; i++) {
+	  if (presult[i] != foundloc[i]) {
+		cout <<"mismatch at location "<<i<<endl;
+	  }
+	}
+	if (presult.size()<foundloc.size()) {
+	  for (auto i = smaller; i< foundloc.size(); i++) {
+		cout <<"encrypted extra finds "<<i<< foundloc[i]<<endl;
+	  }
+	} else {
+	  for (auto i = smaller; i< presult.size(); i++) {
+		cout <<"plaintext extra finds "<<i<<" "<< presult[i]<<endl;
+	  }
+	}
+  } else {
+	cout<<"encrypted and plaintext results match"<<endl;
+  }
   return 0;
 }

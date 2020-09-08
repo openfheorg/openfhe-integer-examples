@@ -13,11 +13,11 @@ PALISADE_LIBS = -fopenmp /usr/local/lib/libPALISADEcore.so.1  /usr/local/lib/lib
  
 .PHONY: all
 
-all:  $(BIN)/ss_plain $(BIN)/ss_enc_1
+all:  $(BIN)/strsearch_plain $(BIN)/strsearch_enc_1 $(BIN)/strsearch_enc_2
 
 .PHONY: clean
 clean:
-	rm -f $(SRC)/*~ $(SRC)/*.o $(BIN)/ss_plain $(BIN)/ss_enc_1
+	rm -f $(SRC)/*~ $(SRC)/*.o $(BIN)/strsearch_plain $(BIN)/strsearch_enc_1  $(BIN)/strsearch_enc_2
 
 
 #recipie for .o from .cpp and associated .h
@@ -27,19 +27,25 @@ clean:
 	g++  -O2 -I"src" -std=c++11 -c $< -o $@
 
 #source for Test Benches
-$(SRC)/ss_plain.o: $(SRC)/ss_plain.cpp  $(INCLUDES)
+$(SRC)/strsearch_plain.o: $(SRC)/strsearch_plain.cpp  $(INCLUDES)
 	g++ $(CXX_FLAGS) -c $< -o $@ $(PALISADE_INCLUDES)
 
-$(SRC)/ss_enc_1.o: $(SRC)/ss_enc_1.cpp  $(INCLUDES)
+$(SRC)/strsearch_enc_1.o: $(SRC)/strsearch_enc_1.cpp  $(INCLUDES)
+	g++ $(CXX_FLAGS) -c $< -o $@ $(PALISADE_INCLUDES)
+
+$(SRC)/strsearch_enc_2.o: $(SRC)/strsearch_enc_2.cpp  $(INCLUDES)
 	g++ $(CXX_FLAGS) -c $< -o $@ $(PALISADE_INCLUDES)
 
 # common modules
 
 
 #final  executables
-$(BIN)/ss_plain: $(SRC)/ss_plain.o
-	g++  $(GXX_LINK_FLAGS) $^ -o $(BIN)/ss_plain $(PALISADE_LIBS)
+$(BIN)/strsearch_plain: $(SRC)/strsearch_plain.o
+	g++  $(GXX_LINK_FLAGS) $^ -o $(BIN)/strsearch_plain $(PALISADE_LIBS)
 
-$(BIN)/ss_enc_1: $(SRC)/ss_enc_1.o
-	g++  $(GXX_LINK_FLAGS) $^ -o $(BIN)/ss_enc_1 $(PALISADE_LIBS)
+$(BIN)/strsearch_enc_1: $(SRC)/strsearch_enc_1.o
+	g++  $(GXX_LINK_FLAGS) $^ -o $(BIN)/strsearch_enc_1 $(PALISADE_LIBS)
+
+$(BIN)/strsearch_enc_2: $(SRC)/strsearch_enc_2.o
+	g++  $(GXX_LINK_FLAGS) $^ -o $(BIN)/strsearch_enc_2 $(PALISADE_LIBS)
 
