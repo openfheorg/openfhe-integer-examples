@@ -27,7 +27,7 @@ using vecInt = vector<int64_t>; // vector of ints
 using vecChar = vector<char>; // vector of characters
 
 // d is the number of characters in input alphabet
-const int d = 256;
+const int d = 256; 
      
 /*  pat  -> pattern
 	txt  -> text
@@ -37,6 +37,7 @@ const int d = 256;
 void get_input_from_term(vecChar& a) {
   string cstr;
   cin.ignore(numeric_limits<streamsize>::max(),'\n'); //flushes buffer
+  cin >> ws; //discards white space
   std::getline(std::cin, cstr);
   cout <<"Pattern is `"<<cstr<<"'"<<endl;    
   for(auto c: cstr) {
@@ -52,7 +53,7 @@ void get_input_from_file(vecChar& a, string fname) {
   ifstream in_file;
   in_file.open(fname);
   if (!in_file) {
-	cerr << "Can't open file for input: "<<fname;
+	cerr << "Can't open file for input: "<<fname<<endl;
 	exit(-1); //error exit
   }
   
@@ -67,7 +68,7 @@ void get_input_from_file(vecChar& a, string fname) {
      
 vecInt search(vecChar &pat, vecChar &txt, int ps) {
   long p(ps);
-  DEBUG_FLAG(true);
+  DEBUG_FLAG(false);
   int M = pat.size();
   DEBUGEXP(M);
   int N = txt.size();
@@ -241,10 +242,10 @@ int main()
   string infilename;
 
   cout<<"Enter file for Text:";
-  //cin >> infilename;
+  cin >> infilename;
   //infilename = "data/alice.txt";
-  //infilename = "data/warandpeace.txt";
-  infilename = "data/annakarenina.txt";
+  ///infilename = "data/warandpeace.txt";
+  //infilename = "data/annakarenina.txt";
   get_input_from_file(txt, infilename);
 
   //cout<<"Enter buffer size:";
@@ -252,15 +253,13 @@ int main()
   //cin>> maxNBatches;
   maxNBatches = 64;
   cout << "batching to "<<maxNBatches<< " characters max"<<endl;
-  
-  //txt.resize(textSize);
-  
+
   cout<<"Enter Pattern to Search:";
-  //get_input_from_term(pat);
-  pat = {'A', 'n', 'n', 'a'};
+  get_input_from_term(pat);
+  //pat = {'A', 'n', 'n', 'a'};
   
   int p = 786433; //plaintext prime modulus
-  //int p = 65537;
+  //int p = 65537; // use this to show core dump
 
   cout<<"p "<<p<<endl;
   TIC(auto t1);
@@ -271,11 +270,9 @@ int main()
 
   cout <<"setting up BFV RNS crypto system"<<endl;
 
-
   uint32_t plaintextModulus = p;
-  uint32_t multDepth = 32;  //n search char - 4
+  uint32_t multDepth = 32; //works for approx 64 batches
 
-  //uint32_t multDepth = 16; //note this is the biggst we can have in 32k
   double sigma = 3.2;
   SecurityLevel securityLevel = HEStd_128_classic;
 
@@ -284,7 +281,6 @@ int main()
 	CryptoContextFactory<DCRTPoly>::genCryptoContextBFVrns(
 		plaintextModulus, securityLevel, sigma, 0, multDepth, 0, OPTIMIZED);
 
-	
   // Enable features that you wish to use
   cc->Enable(ENCRYPTION);
   cc->Enable(SHE);
@@ -309,36 +305,60 @@ int main()
 
   //encrypt the text
   auto ringsize = cc->GetRingDimension();
-  cout << "ringsize = "<<ringsize << endl;
-  cout << "txt size = "<<txt.size() << endl;
-  unsigned int nbatch = int(ceil(float(txt.size())/float(ringsize)))+1;
-  cout << "can store "<<nbatch <<" batches in the ct"<<endl;
-
-  if (nbatch > maxNBatches) {
-	cout<<"have to limit number of batches to "<<maxNBatches<<endl;
-	nbatch = maxNBatches;
-  }
-  
+  cout << "Given ringsize = "<<ringsize << endl;
+  cout << "and text size = "<<txt.size() << endl;
+  unsigned int nbatchEst = int(ceil(float(txt.size())/float(ringsize)));
+  cout << "We can store approximately "<<nbatchEst <<" batches in the CT"<<endl;
 
   //need to encrypt the text in batches, each one consists of
   //nbatch points. the next batch starts at nbatch-M 
   //so each CT in the vecCT has ringsize entries.
   // vecCT[0] has characters {0, nbatch-M, 2(nbatch-M) etc..}
   // vecCT[1] has characters {1, 1+(nbatch-M), 1+2(nbatch-M) etc..}
-  //
-
-  the mapping isn't exactly right we are missing somehting at the end
-  
-  vecCT etxt(0);
-  auto pt_len(0);
-  vecInt offset(0);
+  cout << "Adjusting number of batches to account for pattern overlap"<<endl;
+  bool done(false);
+  auto nbatch = nbatchEst;
   auto M(pat.size());
-  for(auto bat = 0; bat < ringsize; bat++){
-	offset.push_back(bat*(nbatch-M+1));
+
+  //offset into text corresponding to start of each ring element
+  vecInt offset(0); 
+  size_t largestIx(0);
+  while (!done){
+	//try this combination of nbatch and M and adjust till it fits
+	offset.clear();
+	for(auto bat = 0; bat < ringsize; bat++){
+	  offset.push_back(bat*(nbatch-M+1));
+	}
+	//cout<<"txt size = "<<txt.size()<<endl;
+	//cout<<"nbatch = "<<nbatch<<endl;
+	//cout<<"M = "<<M<<endl;
+	//cout<<"offset(last) = "<<offset[offset.size()-1]<<endl; 
+	largestIx= offset[offset.size()-1]+(nbatch-1);
+	//cout<<"largest index = "<<largestIx<<endl;
+	if (largestIx >= txt.size()){
+	  done = true;
+	} else {
+	  nbatch++;
+	  cout<<"increasing batch size to "<<nbatch<<endl;
+	}
   }
 
+  
+  if (nbatch > maxNBatches) {
+	cout<<"have to limit number of batches to "<<maxNBatches<<endl;
+	nbatch = maxNBatches;
+	if (largestIx+1 < txt.size()){
+	  cout<<"have to limit text size to "<<largestIx+1<<endl;
+	  txt.resize(largestIx+1);
+	}
+  }
+
+  vecCT etxt(0);
+  auto pt_len(0);
+  
+  
   vecInt vin(0);
-  for (auto i = 0; i < nbatch; i++) {	
+  for (auto i = 0; i < nbatch; i++) {
 	cout<<i<< '\r'<<flush;
 	//build a vector out of the batches 
 	for(auto bat = 0; bat < ringsize; bat++){
@@ -353,7 +373,8 @@ int main()
 	vin.clear();
 	CT ct = cc->Encrypt(keyPair.publicKey, pt);
 	etxt.push_back(ct);
-  }	
+  }
+  cout<<"encrypted "<<etxt.size()<<" batches"<<endl;
 
   cout<<"Step 3.2 - Encrypt pattern"<<endl;  
   //encrypt the pattern
