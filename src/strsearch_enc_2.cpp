@@ -128,7 +128,7 @@ vecInt search(vecChar &pat, vecChar &txt, int ps) {
 	}
   } //end for
   //cout<<endl;
-  cout<<"total occurances " <<nfound<<endl;
+  cout<<"total occurences " <<nfound<<endl;
   return pres;
 }
      
@@ -250,8 +250,10 @@ int main()
 
   //cout<<"Enter buffer size:";
   unsigned int maxNBatches(0);
+  unsigned int minNBatches(0);
   //cin>> maxNBatches;
   maxNBatches = 64;
+  minNBatches = 10;
   cout << "batching to "<<maxNBatches<< " characters max"<<endl;
 
   cout<<"Enter Pattern to Search:";
@@ -317,7 +319,7 @@ int main()
   // vecCT[1] has characters {1, 1+(nbatch-M), 1+2(nbatch-M) etc..}
   cout << "Adjusting number of batches to account for pattern overlap"<<endl;
   bool done(false);
-  auto nbatch = nbatchEst;
+  auto nbatch = max(minNBatches, nbatchEst);
   auto M(pat.size());
 
   //offset into text corresponding to start of each ring element
@@ -425,7 +427,7 @@ int main()
   }
 
   sort(foundloc.begin(), foundloc.end());
-  cout<<"total occurances "<<foundloc.size()<<endl;
+  cout<<"total occurences "<<foundloc.size()<<endl;
 
   if (presult.size() != foundloc.size()){
 	cout<<"encrypted and plaintext results do not match"<<endl; 
