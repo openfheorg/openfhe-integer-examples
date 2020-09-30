@@ -13,11 +13,11 @@ PALISADE_LIBS = -fopenmp /usr/local/lib/libPALISADEcore.so.1  /usr/local/lib/lib
  
 .PHONY: all
 
-all:  $(BIN)/strsearch_plain $(BIN)/strsearch_enc_1 $(BIN)/strsearch_enc_2
+all: $(BIN)/strsearch_enc_1 $(BIN)/strsearch_enc_2
 
 .PHONY: clean
 clean:
-	rm -f $(SRC)/*~ $(SRC)/*.o $(BIN)/strsearch_plain $(BIN)/strsearch_enc_1  $(BIN)/strsearch_enc_2
+	rm -f $(SRC)/*~ $(SRC)/*.o $(BIN)/strsearch_enc_1  $(BIN)/strsearch_enc_2
 
 
 #recipie for .o from .cpp and associated .h
@@ -27,8 +27,6 @@ clean:
 	g++  -O2 -I"src" -std=c++11 -c $< -o $@
 
 #source for Test Benches
-$(SRC)/strsearch_plain.o: $(SRC)/strsearch_plain.cpp  $(INCLUDES)
-	g++ $(CXX_FLAGS) -c $< -o $@ $(PALISADE_INCLUDES)
 
 $(SRC)/strsearch_enc_1.o: $(SRC)/strsearch_enc_1.cpp  $(INCLUDES)
 	g++ $(CXX_FLAGS) -c $< -o $@ $(PALISADE_INCLUDES)
@@ -40,8 +38,6 @@ $(SRC)/strsearch_enc_2.o: $(SRC)/strsearch_enc_2.cpp  $(INCLUDES)
 
 
 #final  executables
-$(BIN)/strsearch_plain: $(SRC)/strsearch_plain.o
-	g++  $(GXX_LINK_FLAGS) $^ -o $(BIN)/strsearch_plain $(PALISADE_LIBS)
 
 $(BIN)/strsearch_enc_1: $(SRC)/strsearch_enc_1.o
 	g++  $(GXX_LINK_FLAGS) $^ -o $(BIN)/strsearch_enc_1 $(PALISADE_LIBS)

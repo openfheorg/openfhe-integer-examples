@@ -1,9 +1,8 @@
-/* PALISADE C++ program implements the Rabin-Karp method for string matching using
- * encrypted computation
+/* PALISADE C++ program implements the Rabin-Karp method for string
+ * matching using encrypted computation and no SIMD batching
  * plaintext version of this code comes from 
  * https://www.sanfoundry.com/cpp-program-implement-rabin-karp-method-for-string-matching
  * author David Bruce Cousins@dualitytech.com
-
  */
 
 
@@ -28,11 +27,11 @@ using vecChar = vector<char>; // vector of characters
 // d is the number of characters in input alphabet
 const int d = 256;
      
-/*  pat  -> pattern
-	txt  -> text
-	p    -> A prime number
-*/
+//  pat  -> pattern
+//	txt  -> text
+//	p    -> A prime number
      
+// function to get string input from terminal and return as vector of char
 void get_input_from_term(vecChar& a) {
   string cstr;
   cin.ignore(numeric_limits<streamsize>::max(),'\n'); //flushes buffer
@@ -44,7 +43,8 @@ void get_input_from_term(vecChar& a) {
   cout <<"Pattern is "<<a.size()<<" characters"<<endl;  
   return;
 }
-     
+
+// function to read text from a file and return as vector of char
 void get_input_from_file(vecChar& a, string fname) {
   char c;
 
@@ -63,7 +63,7 @@ void get_input_from_file(vecChar& a, string fname) {
   return;
 }
      
-     
+// plaintext string search of pat within txt, with modulus of ps          
 vecInt search(vecChar &pat, vecChar &txt, int ps) {
   long p(ps);
   DEBUG_FLAG(false);
@@ -122,15 +122,15 @@ vecInt search(vecChar &pat, vecChar &txt, int ps) {
 		th = (th + p);
 	  }
 
-	  //cout<<" "<<th;
 	}
   } //end for
-  //cout<<endl;
+
   cout<<"total occurances " <<nfound<<endl;
   return pres;
 }
      
-
+// helper function to encrypt an integer repeatedly into a packed plaintext
+// and encrypt it
 CT encrypt_repeated_integer(CryptoContext<DCRTPoly> &cc, LPPublicKey<DCRTPoly> &pk,  int64_t in, size_t n){
   
   vecInt v_in(0);
@@ -143,6 +143,7 @@ CT encrypt_repeated_integer(CryptoContext<DCRTPoly> &cc, LPPublicKey<DCRTPoly> &
   return ct;
 }
 
+// helper function to multiply by constant 256 using binary tree addition
 CT encMultD(CryptoContext<DCRTPoly> &cc, CT in){
   if (d !=256){
 	cout <<"error d not 256"<<endl;
@@ -155,8 +156,9 @@ CT encMultD(CryptoContext<DCRTPoly> &cc, CT in){
   
   return(tmp);
 }
-     
-vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, LPPrivateKey<DCRTPoly> &sk, vecCT &epat, vecCT &etxt, int ps) {
+
+//Single value encrypted search     
+vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, vecCT &epat, vecCT &etxt, int ps) {
 
   long p(ps);
   DEBUG_FLAG(false);
@@ -181,8 +183,6 @@ vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, 
 	h = (h*d)%p;
   }
   CT hct = encrypt_repeated_integer(cc, pk, h, nrep);  // encrypted h
-  //cc->Decrypt(sk, hct, &dummy);
-  //cout<<" hct: "<<dummy<<endl;
 
   DEBUG("encrypting first hashes" );     
   // Calculate the hash value of pattern and first window of text
@@ -193,10 +193,6 @@ vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, 
 	tmp = encMultD(cc, thct);
 	thct = cc->EvalAdd(tmp, etxt[i]);
   }
-  //cc->Decrypt(sk, phct, &dummy);
-  //cout<<" initial phct: "<<dummy<<endl;
-  //cc->Decrypt(sk, thct, &dummy);
-  //cout<<" initial thct: "<<dummy<<endl;
 
   vecCT eres(0);
   // Slide the pattern over text one by one
@@ -215,7 +211,6 @@ vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, 
 	if ( i < N - M ) {
 	  DEBUG("rehash" );     
 	  //th = (d * (th - txt[i] * h) + txt[i + M]) % p;
-	  //cout <<"thct depth before "<<thct->GetDepth()<<endl;
 
 	  auto tmp = encMultD(cc,
 						  cc->EvalSub(thct,
@@ -224,12 +219,6 @@ vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, 
 						  );
 	  thct = cc->EvalAdd(tmp, etxt[i+M] );
 
-	  cc->Decrypt(sk, thct, &dummy);
-	  auto test = dummy->GetPackedValue();
-	  if (test[1] != 0) {
-		cout<<"overflow!!"<<endl;
-		exit(-1);
-	  }
 	}
 
   } //end for
@@ -238,33 +227,36 @@ vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, 
      
 int main()
 {
-  vecChar txt;
+  vecChar bigtxt;
+
   vecChar pat;
   string infilename;
 
-  cout<<sizeof(int)<<endl;
-  cout<<sizeof(long)<<endl;
-  
-  cout<<"Enter file for Text:";
+  //Note inputs are hardwired, uncomment to add user control
+  //cout<<"Enter file for Text:";
   //cin >> infilename;
-  //infilename = "data/alice.txt";
-  infilename = "data/warandpeace.txt";
-  get_input_from_file(txt, infilename);
+  infilename = "data/annakarenina.txt";
+  get_input_from_file(bigtxt, infilename);
 
   //cout<<"Enter text size:";
   unsigned int textSize(0);
   //cin>> textSize;
-  textSize = 64;
-  cout << "Limiting search to "<<textSize<< " characters"<<endl;
+  textSize = 32;
+  unsigned int offset(16);
+  cout << "Limiting search to "<<textSize<< " characters "
+	  <<"starting at offset "<<offset<<endl;
+
+  vecChar::const_iterator first = bigtxt.begin() + offset;
+  vecChar::const_iterator last = bigtxt.begin() + offset+textSize;
+  vecChar txt(first, last);
   
-  txt.resize(textSize);
-  
-  cout<<"Enter Pattern to Search:";
+  //Note inputs are hardwired, uncomment to add user control
+  //cout<<"Enter Pattern to Search:";
   //get_input_from_term(pat);
-  pat = {'T', 'o', 'l', 's', 't', 'o', 'y'};
+  pat = {'A', 'n', 'n', 'a'};
   
   int p = 786433; //plaintext prime modulus
-  //int p = 65537;
+  //int p = 65537; //note this causes exception
 
   cout<<"p "<<p<<endl;
   TIC(auto t1);
@@ -276,8 +268,8 @@ int main()
   cout <<"setting up BFV RNS crypto system"<<endl;
 
   uint32_t plaintextModulus = p;
-  //  uint32_t multDepth = 32;  //n search char - 4
-    uint32_t multDepth = 16; 
+  uint32_t multDepth = 32;
+
   double sigma = 3.2;
   SecurityLevel securityLevel = HEStd_128_classic;
 
@@ -300,13 +292,7 @@ int main()
   // Generate the relinearization key
   cc->EvalMultKeyGen(keyPair.secretKey);
 
-  // note we do not use rotation in this example so we don't need rotation keys
-  // but make them anyway 
-  // Generate the rotation evaluation keys
-  cc->EvalAtIndexKeyGen(keyPair.secretKey, {1, 2, -1, -2}); 
-
   cout<<"Step 3 - Encryption"<<endl;  
-
 
   cout<<"Step 3.1 - Encrypt pattern"<<endl;  
   //encrypt the pattern
@@ -346,14 +332,12 @@ int main()
   cout<<"Step 4 - Encrypted string search"<<endl;  
 
   TIC(auto t2);
-  //secret key only for debug. remove it after
-  vecCT eresult = encrypted_search(cc, keyPair.publicKey, keyPair.secretKey, epat, etxt, p);
+
+  vecCT eresult = encrypted_search(cc, keyPair.publicKey, epat, etxt, p);
   auto encrypted_time_ms = TOC_MS(t2);
-		  cout<< "Encrypted execution time "<<encrypted_time_ms<<" mSec."<<endl;  
+  cout<< "Encrypted execution time "<<encrypted_time_ms<<" mSec."<<endl;  
 
-  
-
-
+  //decrypt the result and compute location of potential matches
   vecPT vecResult(0);
   for (auto e_itr:eresult){
 	PT ptresult;  
@@ -373,12 +357,6 @@ int main()
 	i++;
   }
   cout<<"total occurances "<<nfound<<endl;
-  //  cout<<"encrypted Result "<<vecResult << endl;
-  //cout<<"plaintext Result "<<presult << endl;
-
-  //for (auto i = 0; i < vecResult.size(); i++){
-  //	cout<< vecResult[i] << " " << presult[i]<<endl;
-  //}
 
   return 0;
 }

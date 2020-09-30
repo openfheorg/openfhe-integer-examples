@@ -1,5 +1,5 @@
-/* PALISADE C++ program implements the Rabin-Karp method for string matching using
- * encrypted computation
+/* PALISADE C++ program implements the Rabin-Karp method for string
+ * matching using encrypted computation with SIMD batching
  * plaintext version of this code comes from 
  * https://www.sanfoundry.com/cpp-program-implement-rabin-karp-method-for-string-matching
  * author David Bruce Cousins@dualitytech.com
@@ -33,7 +33,9 @@ const int d = 256;
 	txt  -> text
 	p    -> A prime number
 */
-     
+
+
+// function to get string input from terminal and return as vector of char
 void get_input_from_term(vecChar& a) {
   string cstr;
   cin.ignore(numeric_limits<streamsize>::max(),'\n'); //flushes buffer
@@ -46,7 +48,8 @@ void get_input_from_term(vecChar& a) {
   cout <<"Pattern is "<<a.size()<<" characters"<<endl;  
   return;
 }
-     
+
+// function to read text from a file and return as vector of char
 void get_input_from_file(vecChar& a, string fname) {
   char c;
 
@@ -65,7 +68,7 @@ void get_input_from_file(vecChar& a, string fname) {
   return;
 }
      
-     
+// plaintext string search of pat within txt, with modulus of ps     
 vecInt search(vecChar &pat, vecChar &txt, int ps) {
   long p(ps);
   DEBUG_FLAG(false);
@@ -132,7 +135,8 @@ vecInt search(vecChar &pat, vecChar &txt, int ps) {
   return pres;
 }
      
-
+// helper function to encrypt an integer repeatedly into a packed plaintext
+// and encrypt it
 CT encrypt_repeated_integer(CryptoContext<DCRTPoly> &cc, LPPublicKey<DCRTPoly> &pk,  int64_t in, size_t n){
   
   vecInt v_in(0);
@@ -145,6 +149,7 @@ CT encrypt_repeated_integer(CryptoContext<DCRTPoly> &cc, LPPublicKey<DCRTPoly> &
   return ct;
 }
 
+// helper function to multiply by constant 256 using binary tree addition
 CT encMultD(CryptoContext<DCRTPoly> &cc, CT in){
   if (d !=256){
 	cout <<"error d not 256"<<endl;
@@ -157,8 +162,9 @@ CT encMultD(CryptoContext<DCRTPoly> &cc, CT in){
   
   return(tmp);
 }
-     
-vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, LPPrivateKey<DCRTPoly> &sk, vecCT &epat, vecCT &etxt, int ps) {
+
+//SIMD encrypted search
+vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk,  vecCT &epat, vecCT &etxt, int ps) {
 
   long p(ps);
   DEBUG_FLAG(false);
@@ -185,8 +191,6 @@ vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, 
 	h = (h*d)%p;
   }
   CT hct = encrypt_repeated_integer(cc, pk, h, nrep);  // encrypted h
-  //cc->Decrypt(sk, hct, &dummy);
-  //cout<<" hct: "<<dummy<<endl;
 
   DEBUG("encrypting first hashes" );     
   // Calculate the hash value of pattern and first window of text
@@ -222,13 +226,6 @@ vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, 
 						  );
 
 	  thct = cc->EvalAdd(tmp, etxt[i+M] );
-	  // //check for overflow during testing
-	  // cc->Decrypt(sk, thct, &dummy);
-	  // auto test = dummy->GetPackedValue();
-	  // if (test[1] != 0) {
-	  // 	cout<<"overflow!!"<<endl;
-	  // 	exit(-1);
-	  // }
 	}
 
   } //end for
@@ -241,25 +238,24 @@ int main()
   vecChar pat;
   string infilename;
 
-  cout<<"Enter file for Text:";
-  cin >> infilename;
-  //infilename = "data/alice.txt";
-  ///infilename = "data/warandpeace.txt";
-  //infilename = "data/annakarenina.txt";
+  //cout<<"Enter file for Text:";
+  //cin >> infilename;
+  infilename = "data/annakarenina.txt";
   get_input_from_file(txt, infilename);
 
   //cout<<"Enter buffer size:";
   unsigned int maxNBatches(0);
   unsigned int minNBatches(0);
   //cin>> maxNBatches;
-  maxNBatches = 64;
+  maxNBatches = 32;
   minNBatches = 10;
   cout << "batching to "<<maxNBatches<< " characters max"<<endl;
 
-  cout<<"Enter Pattern to Search:";
-  get_input_from_term(pat);
-  //pat = {'A', 'n', 'n', 'a'};
+  //cout<<"Enter Pattern to Search:";
   
+  //get_input_from_term(pat);
+  pat = {'A', 'n', 'n', 'a'};
+
   int p = 786433; //plaintext prime modulus
   //int p = 65537; // use this to show core dump
 
@@ -273,7 +269,7 @@ int main()
   cout <<"setting up BFV RNS crypto system"<<endl;
 
   uint32_t plaintextModulus = p;
-  uint32_t multDepth = 32; //works for approx 64 batches
+  uint32_t multDepth = 32; //works for 32 batches
 
   double sigma = 3.2;
   SecurityLevel securityLevel = HEStd_128_classic;
@@ -299,7 +295,7 @@ int main()
   // note we do not use rotation in this example so we don't need rotation keys
   // but make them anyway 
   // Generate the rotation evaluation keys
-  cc->EvalAtIndexKeyGen(keyPair.secretKey, {1, 2, -1, -2}); 
+  //cc->EvalAtIndexKeyGen(keyPair.secretKey, {1, 2, -1, -2}); 
 
   cout<<"Step 3 - Encryption"<<endl;  
 
@@ -331,12 +327,9 @@ int main()
 	for(auto bat = 0; bat < ringsize; bat++){
 	  offset.push_back(bat*(nbatch-M+1));
 	}
-	//cout<<"txt size = "<<txt.size()<<endl;
-	//cout<<"nbatch = "<<nbatch<<endl;
-	//cout<<"M = "<<M<<endl;
-	//cout<<"offset(last) = "<<offset[offset.size()-1]<<endl; 
+
 	largestIx= offset[offset.size()-1]+(nbatch-1);
-	//cout<<"largest index = "<<largestIx<<endl;
+
 	if (largestIx >= txt.size()){
 	  done = true;
 	} else {
@@ -398,14 +391,12 @@ int main()
   cout<<"Step 4 - Encrypted string search"<<endl;  
 
   TIC(auto t2);
-  //secret key only for debug. remove it after
-  vecCT eresult = encrypted_search(cc, keyPair.publicKey, keyPair.secretKey, epat, etxt, p);
+
+  vecCT eresult = encrypted_search(cc, keyPair.publicKey, epat, etxt, p);
   auto encrypted_time_ms = TOC_MS(t2);
-		  cout<< "Encrypted execution time "<<encrypted_time_ms<<" mSec."<<endl;  
+  cout<< "Encrypted execution time "<<encrypted_time_ms<<" mSec."<<endl;  
 
-  
-
-
+  //decrypt the result and compute location of potential matches
   vecPT vecResult(0);
   for (auto e_itr:eresult){
 	PT ptresult;  
