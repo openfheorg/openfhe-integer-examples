@@ -8,5 +8,6 @@ Based on the [Rabin-Karp algorithm](https://en.wikipedia.org/wiki/Rabin–Karp_a
 
 Source code adapted from [C++ source code published here](https://www.sanfoundry.com/cpp-program-implement-rabin-karp-method-for-string-matching/)
 
-src/strsearch_enc_1.cpp encrypted string search no SIMD batching
-src/strsearch_enc_2.cpp encrypted string search with SIMD batching
+> src/strsearch_enc_1.cpp encrypted string search no SIMD batching
+
+> src/strsearch_enc_2.cpp encrypted string search with SIMD batching
