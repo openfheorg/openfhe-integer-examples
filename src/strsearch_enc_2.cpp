@@ -139,10 +139,7 @@ vecInt search(vecChar &pat, vecChar &txt, int ps) {
 // and encrypt it
 CT encrypt_repeated_integer(CryptoContext<DCRTPoly> &cc, LPPublicKey<DCRTPoly> &pk,  int64_t in, size_t n){
   
-  vecInt v_in(0);
-  for (auto i = 0; i < n; i++){
-	v_in.push_back(in);
-  }
+  vecInt v_in(0, in);
   PT pt= cc->MakePackedPlaintext(v_in);
   CT ct = cc->Encrypt(pk, pt);
 
@@ -172,7 +169,7 @@ vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, 
   DEBUGEXP(M);
   int N = etxt.size();
   DEBUGEXP(N);
-  int i, j;
+  int i;
 
   PT dummy;
   
@@ -183,7 +180,6 @@ vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, 
 
   CT dhct = encrypt_repeated_integer(cc, pk, d, nrep);  // d
 
-  int nfound = 0;
   DEBUG("encrypting hct");     
   // The value of h would be "pow(d, M-1)%p"
   long h = 1;
@@ -322,20 +318,20 @@ int main()
   vecInt offset(0); 
   size_t largestIx(0);
   while (!done){
-	//try this combination of nbatch and M and adjust till it fits
-	offset.clear();
-	for(auto bat = 0; bat < ringsize; bat++){
-	  offset.push_back(bat*(nbatch-M+1));
-	}
+    //try this combination of nbatch and M and adjust till it fits
+    offset.clear();
+    for(usint bat = 0; bat < ringsize; bat++){
+      offset.push_back(bat*(nbatch-M+1));
+    }
 
-	largestIx= offset[offset.size()-1]+(nbatch-1);
+    largestIx= offset[offset.size()-1]+(nbatch-1);
 
-	if (largestIx >= txt.size()){
-	  done = true;
-	} else {
-	  nbatch++;
-	  cout<<"increasing batch size to "<<nbatch<<endl;
-	}
+    if (largestIx >= txt.size()){
+      done = true;
+    } else {
+      nbatch++;
+      cout<<"increasing batch size to "<<nbatch<<endl;
+    }
   }
 
   
@@ -349,25 +345,24 @@ int main()
   }
 
   vecCT etxt(0);
-  auto pt_len(0);
-  
+  auto pt_len(0);  
   
   vecInt vin(0);
-  for (auto i = 0; i < nbatch; i++) {
-	cout<<i<< '\r'<<flush;
-	//build a vector out of the batches 
-	for(auto bat = 0; bat < ringsize; bat++){
-	  if (i+offset[bat] >= txt.size()) {
-		vin.push_back('\0'); //null terminate
-	  } else {
-		vin.push_back(txt[i+offset[bat]]);
-	  }
-	}
-	Plaintext pt= cc->MakePackedPlaintext(vin);
-	pt_len = pt->GetLength();
-	vin.clear();
-	CT ct = cc->Encrypt(keyPair.publicKey, pt);
-	etxt.push_back(ct);
+  for (usint i = 0; i < nbatch; i++) {
+    cout<<i<< '\r'<<flush;
+    //build a vector out of the batches 
+    for(usint bat = 0; bat < ringsize; bat++){
+      if (i+(unsigned)offset[bat] >= txt.size()) {
+        vin.push_back('\0'); //null terminate
+      } else {
+        vin.push_back(txt[i+offset[bat]]);
+      }
+    }
+    Plaintext pt= cc->MakePackedPlaintext(vin);
+    pt_len = pt->GetLength();
+    vin.clear();
+    CT ct = cc->Encrypt(keyPair.publicKey, pt);
+    etxt.push_back(ct);
   }
   cout<<"encrypted "<<etxt.size()<<" batches"<<endl;
 
@@ -379,7 +374,7 @@ int main()
   for (auto ch: pat) {
 	cout<<j<< '\r'<<flush;
 	j++;
-	for(auto bat = 0; bat < ringsize; bat++){
+	for(usint bat = 0; bat < ringsize; bat++){
 	  vin.push_back(ch);
 	}
 	PT pt= cc->MakePackedPlaintext(vin);
@@ -405,16 +400,15 @@ int main()
 	vecResult.push_back(ptresult);
   }
 
-  int i(0);
   vecInt foundloc(0);
-  for (auto i = 0; i < vecResult.size(); i++) {
-	auto unpackedVal = vecResult[i]->GetPackedValue();
-	for (auto j = 0; j< ringsize; j++) {
-	  if (unpackedVal[j] == 0) {
-		auto loc = i + offset[j];
-		foundloc.push_back(loc);
-	  }
-	}
+  for (usint i = 0; i < vecResult.size(); i++) {
+    auto unpackedVal = vecResult[i]->GetPackedValue();
+    for (usint j = 0; j< ringsize; j++) {
+      if (unpackedVal[j] == 0) {
+      auto loc = i + offset[j];
+      foundloc.push_back(loc);
+      }
+    }
   }
 
   sort(foundloc.begin(), foundloc.end());
@@ -425,7 +419,7 @@ int main()
 	
 	auto smaller = min(presult.size(), foundloc.size());
 	
-	for (auto i = 0; i< smaller; i++) {
+	for (usint i = 0; i < smaller; i++) {
 	  if (presult[i] != foundloc[i]) {
 		cout <<"mismatch at location "<<i<<endl;
 	  }

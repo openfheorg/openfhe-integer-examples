@@ -3,3 +3,6 @@ examples/*/*/*.out
 src/*.o
 src/*~
 *~
+
+# Build products
+build/*
