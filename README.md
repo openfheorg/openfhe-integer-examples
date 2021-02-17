@@ -28,13 +28,13 @@ instructions.  It's recommended to use at least Ubuntu 18.04, and gnu g++ 7 or g
 1. Install pre-requisites (if not already installed):
 `g++`, `cmake`, `make`, and `autoconf`. Sample commands using `apt-get` are listed below. It is possible that these are already installed on your system.
 
-> `sudo apt-get install build-essential #this already includes g++`
 
-> `sudo apt-get install autoconf`
-
-> `sudo apt-get install make`
-
-> `sudo apt-get install cmake`
+```bash
+sudo apt-get install build-essential #this already includes g++
+sudo apt-get install autoconf
+sudo apt-get install make
+sudo apt-get install cmake
+```
 
 > Note that `sudo apt-get install g++-<version>` can be used to
 install a specific version of the compiler. You can use `g++
@@ -43,7 +43,7 @@ default.
 
 2. Install PALISADE on your system. This code was tested with pre-release 1.10.3.
 
-Full instructions for this are to be found in the `README.md` file in the PALISADE repo. 
+    * Full instructions for this are to be found in the [README.md](https://gitlab.com/palisade/palisade-release/-/blob/master/README.md) file in the [PALISADE repo](https://gitlab.com/palisade/palisade-release).
 
 Run `make install` at the end to install the system to the default
 location (you can change this location, but then you will have to
@@ -53,13 +53,19 @@ change the Makefile in this repo to reflect the new location).
 
 4. Create the bin directory
 
-> `mkdir bin`
+```
+mkdir build
+```
 
-5. Build the system using make
+5. Build the system using cmake
 
-> `make`
+```
+cd build
+cmake ..
+make
+```
 
-All the examples will be in the `bin` directory. All input files, and resulting assembler outputs will be in various subdirectories under `examples`.
+All the examples will be in the `build/bin` directory. All input files, and resulting assembler outputs will be in various subdirectories under `examples`.
 
 Running Simple Examples
 =======================

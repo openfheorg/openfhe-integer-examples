@@ -133,10 +133,7 @@ vecInt search(vecChar &pat, vecChar &txt, int ps) {
 // and encrypt it
 CT encrypt_repeated_integer(CryptoContext<DCRTPoly> &cc, LPPublicKey<DCRTPoly> &pk,  int64_t in, size_t n){
   
-  vecInt v_in(0);
-  for (auto i = 0; i < n; i++){
-	v_in.push_back(in);
-  }
+  vecInt v_in(n, in);
   PT pt= cc->MakePackedPlaintext(v_in);
   CT ct = cc->Encrypt(pk, pt);
 
@@ -166,7 +163,7 @@ vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, 
   DEBUGEXP(M);
   int N = etxt.size();
   DEBUGEXP(N);
-  int i, j;
+  int i;
 
   PT dummy;
   
@@ -175,7 +172,6 @@ vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, 
   CT phct = encrypt_repeated_integer(cc, pk, 0, nrep);  // hash value for pattern
   CT thct = encrypt_repeated_integer(cc, pk, 0, nrep);  // hash value for txt
 
-  int nfound = 0;
   DEBUG("encrypting hct");     
   // The value of h would be "pow(d, M-1)%p"
   long h = 1;
@@ -319,7 +315,7 @@ int main()
   cout<<"Step 3.2 - Encrypt text"<<endl;  
   vecCT etxt(0);
   auto pt_len(0);
-  for (auto i = 0; i < txt.size(); i++) {
+  for (usint i = 0; i < txt.size(); i++) {
 	cout<<i<< '\r'<<flush;
 
 	vin.push_back(txt[i]);
