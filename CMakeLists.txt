@@ -5,7 +5,7 @@ project(palisade-integer-examples CXX)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-find_package(Palisade 1.10.6...) # Use 1.10.6 ... means at least if I put 1.11.0 after ... that be max
+find_package(Palisade 1.10.6) # Palisade's ConfigVersion allows this to mean that 1.10.6 is minimum supported ver.
 
 set( CMAKE_CXX_FLAGS ${PALISADE_CXX_FLAGS} )
 set( CMAKE_EXE_LINKER_FLAGS ${PALISADE_EXE_LINKER_FLAGS} )
