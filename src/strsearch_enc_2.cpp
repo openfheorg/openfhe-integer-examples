@@ -27,7 +27,7 @@ using vecInt = vector<int64_t>; // vector of ints
 using vecChar = vector<char>; // vector of characters
 
 // d is the number of characters in input alphabet
-const int d = 256; 
+const int32_t d = 256; 
      
 /*  pat  -> pattern
 	txt  -> text
@@ -43,7 +43,7 @@ void get_input_from_term(vecChar& a) {
   std::getline(std::cin, cstr);
   cout <<"Pattern is `"<<cstr<<"'"<<endl;    
   for(auto c: cstr) {
-	a.push_back(c);
+	  a.push_back(c);
   }
   cout <<"Pattern is "<<a.size()<<" characters"<<endl;  
   return;
@@ -56,8 +56,8 @@ void get_input_from_file(vecChar& a, string fname) {
   ifstream in_file;
   in_file.open(fname);
   if (!in_file) {
-	cerr << "Can't open file for input: "<<fname<<endl;
-	exit(-1); //error exit
+    cerr << "Can't open file for input: "<<fname<<endl;
+    exit(-1); //error exit
   }
   
   while (in_file >> c) {
@@ -70,30 +70,30 @@ void get_input_from_file(vecChar& a, string fname) {
      
 // plaintext string search of pat within txt, with modulus of ps     
 vecInt search(vecChar &pat, vecChar &txt, int ps) {
-  long p(ps);
+  int64_t p(ps);
   DEBUG_FLAG(false);
-  int M = pat.size();
+  size_t M = pat.size();
   DEBUGEXP(M);
-  int N = txt.size();
+  size_t N = txt.size();
   DEBUGEXP(N);
-  int i, j;
-  long ph = 0;  // hash value for pattern
-  long th = 0; // hash value for txt
-  long h = 1;
+  size_t i, j;
+  int64_t ph = 0;  // hash value for pattern
+  int64_t th = 0; // hash value for txt
+  int64_t h = 1;
 
   int nfound = 0;
      
   // The value of h would be "pow(d, M-1)%p"
   for (i = 0; i < M-1; i++) {
-	h = (h*d)%p;
-	DEBUGEXP(h);
+    h = (h*d)%p;
+    DEBUGEXP(h);
   }
   DEBUG(" hfinal: "<<h);
 
   // Calculate the hash value of pattern and first window of text
   for (i = 0; i < M; i++) {
-	ph = (d * ph + pat[i]) % p;
-	th = (d * th + txt[i]) % p;
+    ph = (d * ph + pat[i]) % p;
+    th = (d * th + txt[i]) % p;
   }
   DEBUG(" initial ph: "<<ph);
   DEBUG(" initial th: "<<th);
@@ -153,8 +153,8 @@ CT encMultD(CryptoContext<DCRTPoly> &cc, CT in){
 	exit(-1);
   }
   auto tmp(in);
-  for (auto i = 0; i< 8; i++ ){
-	tmp = cc->EvalAdd(tmp, tmp);
+  for (size_t i = 0; i< 8; i++ ){
+	  tmp = cc->EvalAdd(tmp, tmp);
   }
   
   return(tmp);
@@ -163,13 +163,13 @@ CT encMultD(CryptoContext<DCRTPoly> &cc, CT in){
 //SIMD encrypted search
 vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk,  vecCT &epat, vecCT &etxt, int ps) {
 
-  long p(ps);
+  int64_t p(ps);
   DEBUG_FLAG(false);
-  int M = epat.size();
+  size_t M = epat.size();
   DEBUGEXP(M);
-  int N = etxt.size();
+  size_t N = etxt.size();
   DEBUGEXP(N);
-  int i;
+  size_t i;
 
   PT dummy;
   
@@ -184,45 +184,45 @@ vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, 
   // The value of h would be "pow(d, M-1)%p"
   long h = 1;
   for (i = 0; i < M-1; i++) {
-	h = (h*d)%p;
+	  h = (h*d)%p;
   }
   CT hct = encrypt_repeated_integer(cc, pk, h, nrep);  // encrypted h
 
   DEBUG("encrypting first hashes" );     
   // Calculate the hash value of pattern and first window of text
   for (i = 0; i < M; i++) {
-	auto tmp = encMultD(cc, phct);	
-	phct = cc->EvalAdd(tmp, epat[i]);
+    auto tmp = encMultD(cc, phct);	
+    phct = cc->EvalAdd(tmp, epat[i]);
 
-	tmp = encMultD(cc, thct);
-	thct = cc->EvalAdd(tmp, etxt[i]);
+    tmp = encMultD(cc, thct);
+    thct = cc->EvalAdd(tmp, etxt[i]);
   }
 
   vecCT eres(0);
   // Slide the pattern over text one by one
   DEBUG("sliding" );     
   for (i = 0; i <= N - M; i++) {
-	cout<<i<< '\r'<<flush;
-	
-	// Check the hash values of current window of text and pattern
-	// If the hash values match then only check for characters on by one
-	// subtract the two hashes, zero is equality
-	DEBUG("sub" );     
-	eres.push_back(cc->EvalSub(phct, thct));
-     
-	// Calculate hash value for next window of text: Remove leading digit,
-	// add trailing digit
-	if ( i < N - M ) {
-	  DEBUG("rehash" );     
-	  //th = (d * (th - txt[i] * h) + txt[i + M]) % p;
-	  auto tmp = encMultD(cc,
-						  cc->EvalSub(thct,
-									  cc->EvalMult(etxt[i], hct)
-									  )
-						  );
+    cout<<i<< '\r'<<flush;
+    
+    // Check the hash values of current window of text and pattern
+    // If the hash values match then only check for characters on by one
+    // subtract the two hashes, zero is equality
+    DEBUG("sub" );     
+    eres.push_back(cc->EvalSub(phct, thct));
+      
+    // Calculate hash value for next window of text: Remove leading digit,
+    // add trailing digit
+    if ( i < N - M ) {
+      DEBUG("rehash" );     
+      //th = (d * (th - txt[i] * h) + txt[i + M]) % p;
+      auto tmp = encMultD(cc,
+                cc->EvalSub(thct,
+                      cc->EvalMult(etxt[i], hct)
+                      )
+                );
 
-	  thct = cc->EvalAdd(tmp, etxt[i+M] );
-	}
+      thct = cc->EvalAdd(tmp, etxt[i+M] );
+    }
 
   } //end for
   return eres;
@@ -240,8 +240,8 @@ int main()
   get_input_from_file(txt, infilename);
 
   //cout<<"Enter buffer size:";
-  unsigned int maxNBatches(0);
-  unsigned int minNBatches(0);
+  uint32_t maxNBatches(0);
+  uint32_t minNBatches(0);
   //cin>> maxNBatches;
   maxNBatches = 32;
   minNBatches = 10;
@@ -252,7 +252,7 @@ int main()
   //get_input_from_term(pat);
   pat = {'A', 'n', 'n', 'a'};
 
-  int p = 786433; //plaintext prime modulus
+  int32_t p = 786433; //plaintext prime modulus
   //int p = 65537; // use this to show core dump
 
   cout<<"p "<<p<<endl;
@@ -301,7 +301,7 @@ int main()
   auto ringsize = cc->GetRingDimension();
   cout << "Given ringsize = "<<ringsize << endl;
   cout << "and text size = "<<txt.size() << endl;
-  unsigned int nbatchEst = int(ceil(float(txt.size())/float(ringsize)));
+  uint32_t nbatchEst = int(ceil(float(txt.size())/float(ringsize)));
   cout << "We can store approximately "<<nbatchEst <<" batches in the CT"<<endl;
 
   //need to encrypt the text in batches, each one consists of
@@ -320,7 +320,7 @@ int main()
   while (!done){
     //try this combination of nbatch and M and adjust till it fits
     offset.clear();
-    for(usint bat = 0; bat < ringsize; bat++){
+    for(size_t bat = 0; bat < ringsize; bat++){
       offset.push_back(bat*(nbatch-M+1));
     }
 
@@ -348,10 +348,10 @@ int main()
   auto pt_len(0);  
   
   vecInt vin(0);
-  for (usint i = 0; i < nbatch; i++) {
+  for (size_t i = 0; i < nbatch; i++) {
     cout<<i<< '\r'<<flush;
     //build a vector out of the batches 
-    for(usint bat = 0; bat < ringsize; bat++){
+    for(size_t bat = 0; bat < ringsize; bat++){
       if (i+(unsigned)offset[bat] >= txt.size()) {
         vin.push_back('\0'); //null terminate
       } else {
@@ -374,7 +374,7 @@ int main()
   for (auto ch: pat) {
 	cout<<j<< '\r'<<flush;
 	j++;
-	for(usint bat = 0; bat < ringsize; bat++){
+	for(size_t bat = 0; bat < ringsize; bat++){
 	  vin.push_back(ch);
 	}
 	PT pt= cc->MakePackedPlaintext(vin);
@@ -401,9 +401,9 @@ int main()
   }
 
   vecInt foundloc(0);
-  for (usint i = 0; i < vecResult.size(); i++) {
+  for (size_t i = 0; i < vecResult.size(); i++) {
     auto unpackedVal = vecResult[i]->GetPackedValue();
-    for (usint j = 0; j< ringsize; j++) {
+    for (size_t j = 0; j< ringsize; j++) {
       if (unpackedVal[j] == 0) {
       auto loc = i + offset[j];
       foundloc.push_back(loc);
@@ -414,27 +414,27 @@ int main()
   sort(foundloc.begin(), foundloc.end());
   cout<<"total occurences "<<foundloc.size()<<endl;
 
-  if (presult.size() != foundloc.size()){
-	cout<<"encrypted and plaintext results do not match"<<endl; 
-	
-	auto smaller = min(presult.size(), foundloc.size());
-	
-	for (usint i = 0; i < smaller; i++) {
-	  if (presult[i] != foundloc[i]) {
-		cout <<"mismatch at location "<<i<<endl;
-	  }
-	}
-	if (presult.size()<foundloc.size()) {
-	  for (auto i = smaller; i< foundloc.size(); i++) {
-		cout <<"encrypted extra finds "<<i<< foundloc[i]<<endl;
-	  }
-	} else {
-	  for (auto i = smaller; i< presult.size(); i++) {
-		cout <<"plaintext extra finds "<<i<<" "<< presult[i]<<endl;
-	  }
-	}
+  if (presult.size() != foundloc.size()) {
+    cout<<"encrypted and plaintext results do not match"<<endl; 
+    
+    size_t smaller = min(presult.size(), foundloc.size());
+    
+    for (size_t i = 0; i < smaller; i++) {
+      if (presult[i] != foundloc[i]) {
+      cout <<"mismatch at location "<< i <<endl;
+      }
+    }      
+    if (presult.size()<foundloc.size()) {
+      for (size_t i = smaller; i< foundloc.size(); i++) {
+      cout <<"encrypted extra finds "<<i<< foundloc[i]<<endl;
+      }
+    } else {
+      for (size_t i = smaller; i< presult.size(); i++) {
+      cout <<"plaintext extra finds "<<i<<" "<< presult[i]<<endl;
+      }
+    }
   } else {
-	cout<<"encrypted and plaintext results match"<<endl;
+	  cout<<"encrypted and plaintext results match"<<endl;
   }
   return 0;
 }
