@@ -139,7 +139,7 @@ vecInt search(vecChar &pat, vecChar &txt, int ps) {
 // and encrypt it
 CT encrypt_repeated_integer(CryptoContext<DCRTPoly> &cc, LPPublicKey<DCRTPoly> &pk,  int64_t in, size_t n){
   
-  vecInt v_in(0, in);
+  vecInt v_in(n, in);
   PT pt= cc->MakePackedPlaintext(v_in);
   CT ct = cc->Encrypt(pk, pt);
 
