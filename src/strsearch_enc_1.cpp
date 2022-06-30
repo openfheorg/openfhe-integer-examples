@@ -12,13 +12,14 @@
 #include <fstream>
 #include <vector>
 #include "debug.h"
-#include "palisade.h"
+#include "openfhe.h"
+#include "scheme/bfvrns/cryptocontext-bfvrns.h"
+#include "gen-cryptocontext.h"
 using namespace std;
-using namespace lbcrypto;
 
 //data types we will need
-using CT = Ciphertext<DCRTPoly> ; //ciphertext
-using PT = Plaintext ; //plaintext
+using CT = lbcrypto::Ciphertext<DCRTPoly> ; //ciphertext
+using PT = lbcrypto::Plaintext ; //plaintext
 using vecCT = vector<CT>; //vector of ciphertexts
 using vecPT = vector<PT>; //vector of plaintexts
 using vecInt = vector<int64_t>; // vector of ints
@@ -131,7 +132,7 @@ vecInt search(vecChar &pat, vecChar &txt, int ps) {
      
 // helper function to encrypt an integer repeatedly into a packed plaintext
 // and encrypt it
-CT encrypt_repeated_integer(CryptoContext<DCRTPoly> &cc, LPPublicKey<DCRTPoly> &pk,  int64_t in, size_t n){
+CT encrypt_repeated_integer(lbcrypto::CryptoContext<lbcrypto::DCRTPoly> &cc, lbcrypto::PublicKey<lbcrypto::DCRTPoly> &pk,  int64_t in, size_t n){
   
   vecInt v_in(n, in);
   PT pt= cc->MakePackedPlaintext(v_in);
@@ -141,7 +142,7 @@ CT encrypt_repeated_integer(CryptoContext<DCRTPoly> &cc, LPPublicKey<DCRTPoly> &
 }
 
 // helper function to multiply by constant 256 using binary tree addition
-CT encMultD(CryptoContext<DCRTPoly> &cc, CT in){
+CT encMultD(lbcrypto::CryptoContext<lbcrypto::DCRTPoly> &cc, CT in){
   if (d !=256){
     cout <<"error d not 256"<<endl;
     exit(-1);
@@ -155,7 +156,7 @@ CT encMultD(CryptoContext<DCRTPoly> &cc, CT in){
 }
 
 //Single value encrypted search     
-vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, vecCT &epat, vecCT &etxt, int ps) {
+vecCT encrypted_search(lbcrypto::CryptoContext<lbcrypto::DCRTPoly> &cc,  lbcrypto::PublicKey<lbcrypto::DCRTPoly> &pk, vecCT &epat, vecCT &etxt, int ps) {
 
   int64_t p(ps);
   DEBUG_FLAG(false);
@@ -267,17 +268,28 @@ int main()
   uint32_t multDepth = 32;
 
   double sigma = 3.2;
-  SecurityLevel securityLevel = HEStd_128_classic;
+  lbcrypto::SecurityLevel securityLevel = lbcrypto::HEStd_128_classic;
 
-  // Instantiate the crypto context
-  CryptoContext<DCRTPoly> cc =
-	CryptoContextFactory<DCRTPoly>::genCryptoContextBFVrns(
+  lbcrypto::CCParams<lbcrypto::CryptoContextBFVRNS> parameters;
+    parameters.SetPlaintextModulus(plaintextModulus);
+    parameters.SetSecurityLevel(securityLevel);
+    parameters.SetStandardDeviation(sigma);
+    parameters.SetMaxDepth(multDepth);
+    parameters.SetKeySwitchCount()
+
+    // adds, mults, keyswitches, optimized
+
+
+    lbcrypto::CryptoContext<lbcrypto::DCRTPoly> cc = lbcrypto::GenCryptoContext(parameters);
+
+    // Instantiate the crypto context
+	lbcrypto::CryptoContextFactory<lbcrypto::DCRTPoly>::genCryptoContextBFVrns(
 		plaintextModulus, securityLevel, sigma, 0, multDepth, 0, OPTIMIZED);
 
-	
+
   // Enable features that you wish to use
   cc->Enable(ENCRYPTION);
-  cc->Enable(SHE);
+  cc->Enable();
 
   cout<<"Step 2 - Key Generation"<<endl;
   
