@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.5.1)
 
-project(palisade-integer-examples CXX)
+project(openfhe-integer-examples CXX)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)

@@ -7,14 +7,17 @@
  */
 
 
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <algorithm>
-#include "debug.h"
-#include "palisade.h"
+
+#include "scheme/bfvrns/cryptocontext-bfvrns.h"
+#include "gen-cryptocontext.h"
+#include "openfhe.h"
+#include "debug_utils.h"
 using namespace std;
 using namespace lbcrypto;
 
@@ -137,7 +140,7 @@ vecInt search(vecChar &pat, vecChar &txt, int ps) {
      
 // helper function to encrypt an integer repeatedly into a packed plaintext
 // and encrypt it
-CT encrypt_repeated_integer(CryptoContext<DCRTPoly> &cc, LPPublicKey<DCRTPoly> &pk,  int64_t in, size_t n){
+CT encrypt_repeated_integer(CryptoContext<DCRTPoly> &cc, PublicKey<DCRTPoly> &pk,  int64_t in, size_t n){
   
   vecInt v_in(n, in);
   PT pt= cc->MakePackedPlaintext(v_in);
@@ -161,7 +164,7 @@ CT encMultD(CryptoContext<DCRTPoly> &cc, CT in){
 }
 
 //SIMD encrypted search
-vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk,  vecCT &epat, vecCT &etxt, int ps) {
+vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  PublicKey<DCRTPoly> &pk,  vecCT &epat, vecCT &etxt, int ps) {
 
   int64_t p(ps);
   DEBUG_FLAG(false);
@@ -270,14 +273,18 @@ int main()
   double sigma = 3.2;
   SecurityLevel securityLevel = HEStd_128_classic;
 
-  // Instantiate the crypto context
-  CryptoContext<DCRTPoly> cc =
-	CryptoContextFactory<DCRTPoly>::genCryptoContextBFVrns(
-		plaintextModulus, securityLevel, sigma, 0, multDepth, 0, OPTIMIZED);
+  lbcrypto::CCParams<lbcrypto::CryptoContextBFVRNS> parameters;
+  parameters.SetPlaintextModulus(plaintextModulus);
+  parameters.SetSecurityLevel(securityLevel);
+  parameters.SetStandardDeviation(sigma);
+  parameters.SetMultiplicativeDepth(multDepth);
 
-  // Enable features that you wish to use
-  cc->Enable(ENCRYPTION);
-  cc->Enable(SHE);
+  lbcrypto::CryptoContext<lbcrypto::DCRTPoly > cc = lbcrypto::GenCryptoContext(parameters);
+
+    cc->Enable(PKE);
+    cc->Enable(KEYSWITCH);
+    cc->Enable(LEVELEDSHE);
+
 
   cout<<"Step 2 - Key Generation"<<endl;
   
@@ -403,9 +410,9 @@ int main()
   vecInt foundloc(0);
   for (size_t i = 0; i < vecResult.size(); i++) {
     auto unpackedVal = vecResult[i]->GetPackedValue();
-    for (size_t j = 0; j< ringsize; j++) {
-      if (unpackedVal[j] == 0) {
-      auto loc = i + offset[j];
+    for (size_t jj = 0; jj< ringsize; jj++) {
+      if (unpackedVal[jj] == 0) {
+      auto loc = i + offset[jj];
       foundloc.push_back(loc);
       }
     }
