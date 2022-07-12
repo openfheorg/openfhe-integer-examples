@@ -1,4 +1,4 @@
-/* PALISADE C++ program implements the Rabin-Karp method for string
+/* OpenFHE C++ program implements the Rabin-Karp method for string
  * matching using encrypted computation with SIMD batching
  * plaintext version of this code comes from 
  * https://www.sanfoundry.com/cpp-program-implement-rabin-karp-method-for-string-matching
