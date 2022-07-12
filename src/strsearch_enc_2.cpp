@@ -14,10 +14,10 @@
 #include <vector>
 #include <algorithm>
 
+#include "openfhe.h"
+#include "utils/debug.h"
 #include "scheme/bfvrns/cryptocontext-bfvrns.h"
 #include "gen-cryptocontext.h"
-#include "openfhe.h"
-#include "debug_utils.h"
 using namespace std;
 using namespace lbcrypto;
 

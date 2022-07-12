@@ -10,9 +10,9 @@
 #include <iostream>
 #include <vector>
 #include "openfhe.h"
+#include "utils/debug.h"
 #include "scheme/bfvrns/cryptocontext-bfvrns.h"
 #include "gen-cryptocontext.h"
-#include "debug_utils.h"
 using namespace std;
 
 //data types we will need
@@ -67,9 +67,9 @@ vecInt search(vecChar &pat, vecChar &txt, int ps) {
   int64_t p(ps);
   DEBUG_FLAG(false);
   size_t M = pat.size();
-  DEBUGEXP(M);
+//  DEBUGEXP(M);
   size_t N = txt.size();
-  DEBUGEXP(N);
+//  DEBUGEXP(N);
   size_t i, j;
   int64_t ph = 0;  // hash value for pattern
   int64_t th = 0; // hash value for txt
@@ -80,17 +80,17 @@ vecInt search(vecChar &pat, vecChar &txt, int ps) {
   // The value of h would be "pow(d, M-1)%p"
   for (i = 0; i < M-1; i++) {
     h = (h*d)%p;
-    DEBUGEXP(h);
+//    DEBUGEXP(h);
   }
-  DEBUG(" hfinal: "<<h);
+//  DEBUG(" hfinal: "<<h);
 
   // Calculate the hash value of pattern and first window of text
   for (i = 0; i < M; i++) {
     ph = (d * ph + pat[i]) % p;
     th = (d * th + txt[i]) % p;
   }
-  DEBUG(" initial ph: "<<ph);
-  DEBUG(" initial th: "<<th);
+//  DEBUG(" initial ph: "<<ph);
+//  DEBUG(" initial th: "<<th);
   vecInt pres(0);
   // Slide the pattern over text one by one
   for (i = 0; i <= N - M; i++) {
@@ -157,21 +157,21 @@ CT encMultD(lbcrypto::CryptoContext<lbcrypto::DCRTPoly> &cc, CT in){
 vecCT encrypted_search(lbcrypto::CryptoContext<lbcrypto::DCRTPoly> &cc,  lbcrypto::PublicKey<lbcrypto::DCRTPoly> &pk, vecCT &epat, vecCT &etxt, int ps) {
 
   int64_t p(ps);
-  DEBUG_FLAG(false);
+//  DEBUG_FLAG(false);
   size_t M = epat.size();
-  DEBUGEXP(M);
+//  DEBUGEXP(M);
   size_t N = etxt.size();
-  DEBUGEXP(N);
+//  DEBUGEXP(N);
   size_t i;
 
   PT dummy;
 
   size_t nrep(1);
-  DEBUG("encrypting small ct");
+//  DEBUG("encrypting small ct");
   CT phct = encrypt_repeated_integer(cc, pk, 0, nrep);  // hash value for pattern
   CT thct = encrypt_repeated_integer(cc, pk, 0, nrep);  // hash value for txt
 
-  DEBUG("encrypting hct");
+//  DEBUG("encrypting hct");
   // The value of h would be "pow(d, M-1)%p"
   int64_t h = 1;
   for (i = 0; i < M-1; i++) {
@@ -179,7 +179,7 @@ vecCT encrypted_search(lbcrypto::CryptoContext<lbcrypto::DCRTPoly> &cc,  lbcrypt
   }
   CT hct = encrypt_repeated_integer(cc, pk, h, nrep);  // encrypted h
 
-  DEBUG("encrypting first hashes" );
+//  DEBUG("encrypting first hashes" );
   // Calculate the hash value of pattern and first window of text
   for (i = 0; i < M; i++) {
     auto tmp = encMultD(cc, phct);
@@ -191,20 +191,20 @@ vecCT encrypted_search(lbcrypto::CryptoContext<lbcrypto::DCRTPoly> &cc,  lbcrypt
 
   vecCT eres(0);
   // Slide the pattern over text one by one
-  DEBUG("sliding" );
+//  DEBUG("sliding" );
   for (i = 0; i <= N - M; i++) {
 	cout<<i<< '\r'<<flush;
 
 	// Check the hash values of current window of text and pattern
 	// If the hash values match then only check for characters on by one
 	// subtract the two hashes, zero is equality
-	DEBUG("sub" );
+//	DEBUG("sub" );
 	eres.push_back(cc->EvalSub(phct, thct));
 
 	// Calculate hash value for next window of text: Remove leading digit,
 	// add trailing digit
 	if ( i < N - M ) {
-	  DEBUG("rehash" );
+//	  DEBUG("rehash" );
 	  //th = (d * (th - txt[i] * h) + txt[i + M]) % p;
 
 	  auto tmp = encMultD(cc,
