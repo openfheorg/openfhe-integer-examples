@@ -1,4 +1,4 @@
-/* OpenFHE C++ program implements the Rabin-Karp method for string
+/* PALISADE C++ program implements the Rabin-Karp method for string
  * matching using encrypted computation and no SIMD batching
  * plaintext version of this code comes from
  * https://www.sanfoundry.com/cpp-program-implement-rabin-karp-method-for-string-matching
@@ -10,9 +10,9 @@
 #include <iostream>
 #include <vector>
 #include "openfhe.h"
-#include "utils/debug.h"
 #include "scheme/bfvrns/cryptocontext-bfvrns.h"
 #include "gen-cryptocontext.h"
+#include "utils/debug.h"
 using namespace std;
 
 //data types we will need

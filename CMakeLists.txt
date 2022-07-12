@@ -11,6 +11,7 @@ set(CMAKE_CXX_FLAGS ${OpenFHE_CXX_FLAGS})
 
 include_directories(${OPENMP_INCLUDES})
 include_directories(${OpenFHE_INCLUDE})
+message(STATUS "WAT ${OpenFHE_INCLUDE}")
 include_directories(${OpenFHE_INCLUDE}/third-party/include)
 include_directories(${OpenFHE_INCLUDE}/core)
 include_directories(${OpenFHE_INCLUDE}/pke)
