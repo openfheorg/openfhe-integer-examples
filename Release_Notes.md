@@ -1,6 +1,6 @@
-09/30/2020: PALISADE encrypted substring search v1.0 is released
+09/30/2020: OpenFHE encrypted substring search v1.0 is released
 
 * Initial prototype release 
-* Tested with PALISADE v10.3
+* Tested with OpenFHE v10.3
 
-Comments/additions are welcome by the PALISADE team
+Comments/additions are welcome by the OpenFHE team

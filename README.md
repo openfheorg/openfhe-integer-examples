@@ -1,4 +1,4 @@
-# PALISADE integer examples
+# OpenFHE integer examples
 
 Sample programs for Encrypted Integer Processing
 
@@ -41,9 +41,10 @@ install a specific version of the compiler. You can use `g++
 --version` to check the version of `g++` that is the current system
 default.
 
-2. Install PALISADE on your system. This code was tested with pre-release 1.10.3.
+2. Install OpenFHE on your system. This code was tested with pre-release 1.10.3.
 
-    * Full instructions for this are to be found in the [README.md](https://gitlab.com/palisade/palisade-release/-/blob/master/README.md) file in the [PALISADE repo](https://gitlab.com/palisade/palisade-release).
+
+- instructions can be found on the [official installation documentation](https://openfhe-development.readthedocs.io/en/latest/sphinx_rsts/intro/installation/installation.html)
 
 Run `make install` at the end to install the system to the default
 location (you can change this location, but then you will have to
