@@ -1,4 +1,4 @@
-/* PALISADE C++ program implements the Rabin-Karp method for string
+/* OpenFHE C++ program implements the Rabin-Karp method for string
  * matching using encrypted computation and no SIMD batching
  * plaintext version of this code comes from
  * https://www.sanfoundry.com/cpp-program-implement-rabin-karp-method-for-string-matching
@@ -268,7 +268,6 @@ int main()
   double sigma = 3.2;
   lbcrypto::SecurityLevel securityLevel = lbcrypto::HEStd_128_classic;
 
-  // TODO: check params as per https://palisade.gitlab.io/palisade-development/classlbcrypto_1_1CryptoContextFactory.html#a6b804ce1d8241d9158fc0bc11b7e6bc1
     /**
      * Old implementation:
       lbcrypto::CryptoContextFactory<lbcrypto::DCRTPoly>::genCryptoContextBFVrns(

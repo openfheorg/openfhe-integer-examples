@@ -1,6 +1,6 @@
 # Contributing to OpenFHE
 
-We are using git for version management and control. We use gitlab for issue and milestone tracking.
+We are using git for version management and control. We use github for issue and milestone tracking.
 
 We classify contributions as *Major* or *Minor*.
 
@@ -21,7 +21,7 @@ enhancements should be discussed with the OpenFHE team ahead of time before unde
 # Workflow for Minor Contributions
 
 Our workflow for Minor contributions is that developers work in feature branches they create and then submit merge
-requests. All contributions -- be they bug fixes or enhancements -- must be documented in a gitlab issue, before the
+requests. All contributions -- be they bug fixes or enhancements -- must be documented in a Github issue, before the
 merge request.
 
 We require that the code work correctly in all environments before it will be accepted for merging. We are working on
@@ -122,7 +122,7 @@ development library.
 
 In addition to the workflow for Minor contributions the following is the requested procedure or a Major change.
 
-* Fork the `openfhe-development` repository on GitLab
+* Fork the `openfhe-development` repository on Github
 * Clone your new repository or add it as a remote to an existing repository
 * Check out the existing `main` branch, then start a new feature branch for your work
 * When making changes, write code that is consistent with the surrounding code
@@ -148,9 +148,9 @@ In addition to the workflow for Minor contributions the following is the request
   page [Use-of-CMake-in-OpenFHE](https://openfhe-development.readthedocs.io/en/latest/sphinx_rsts/intro/installation/cmake_in_openfhe.html)
   for details.
 
-* Submit a Pull Request on GitLab. Check the results of the continuous- integration tests pipelines and resolve any
+* Submit a Pull Request on Github. Check the results of the continuous- integration tests pipelines and resolve any
   issues that arise.
-* Additional discussion of good Git & GitLab workflow is provided at
+* Additional discussion of good Git & Github workflow is provided at
   http://matplotlib.org/devel/gitwash/development_workflow.html and
   https://docs.scipy.org/doc/numpy-1.15.0/dev/gitwash/development_workflow.html
 * OpenFHE is licensed under a [BSD license](https://github.com/openfheorg/openfhe-development/blob/main/LICENSE)
