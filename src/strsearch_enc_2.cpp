@@ -1,4 +1,4 @@
-/* PALISADE C++ program implements the Rabin-Karp method for string
+/* OpenFHE C++ program implements the Rabin-Karp method for string
  * matching using encrypted computation with SIMD batching
  * plaintext version of this code comes from 
  * https://www.sanfoundry.com/cpp-program-implement-rabin-karp-method-for-string-matching
@@ -7,14 +7,15 @@
  */
 
 
-#include <stdio.h>
-#include <string.h>
+#include <cstring>
 #include <iostream>
-#include <fstream>
 #include <vector>
 #include <algorithm>
-#include "debug.h"
-#include "palisade.h"
+
+#include "openfhe.h"
+#include "utils/debug.h"
+#include "scheme/bfvrns/cryptocontext-bfvrns.h"
+#include "gen-cryptocontext.h"
 using namespace std;
 using namespace lbcrypto;
 
@@ -71,11 +72,11 @@ void get_input_from_file(vecChar& a, string fname) {
 // plaintext string search of pat within txt, with modulus of ps     
 vecInt search(vecChar &pat, vecChar &txt, int ps) {
   int64_t p(ps);
-  DEBUG_FLAG(false);
+  OPENFHE_DEBUG_FLAG(false);
   size_t M = pat.size();
-  DEBUGEXP(M);
+  OPENFHE_DEBUGEXP(M);
   size_t N = txt.size();
-  DEBUGEXP(N);
+  OPENFHE_DEBUGEXP(N);
   size_t i, j;
   int64_t ph = 0;  // hash value for pattern
   int64_t th = 0; // hash value for txt
@@ -86,17 +87,17 @@ vecInt search(vecChar &pat, vecChar &txt, int ps) {
   // The value of h would be "pow(d, M-1)%p"
   for (i = 0; i < M-1; i++) {
     h = (h*d)%p;
-    DEBUGEXP(h);
+    OPENFHE_DEBUGEXP(h);
   }
-  DEBUG(" hfinal: "<<h);
+  OPENFHE_DEBUG(" hfinal: "<<h);
 
   // Calculate the hash value of pattern and first window of text
   for (i = 0; i < M; i++) {
     ph = (d * ph + pat[i]) % p;
     th = (d * th + txt[i]) % p;
   }
-  DEBUG(" initial ph: "<<ph);
-  DEBUG(" initial th: "<<th);
+  OPENFHE_DEBUG(" initial ph: "<<ph);
+  OPENFHE_DEBUG(" initial th: "<<th);
   vecInt pres(0);
   // Slide the pattern over text one by one
   for (i = 0; i <= N - M; i++) {
@@ -137,7 +138,7 @@ vecInt search(vecChar &pat, vecChar &txt, int ps) {
      
 // helper function to encrypt an integer repeatedly into a packed plaintext
 // and encrypt it
-CT encrypt_repeated_integer(CryptoContext<DCRTPoly> &cc, LPPublicKey<DCRTPoly> &pk,  int64_t in, size_t n){
+CT encrypt_repeated_integer(CryptoContext<DCRTPoly> &cc, PublicKey<DCRTPoly> &pk,  int64_t in, size_t n){
   
   vecInt v_in(n, in);
   PT pt= cc->MakePackedPlaintext(v_in);
@@ -161,26 +162,26 @@ CT encMultD(CryptoContext<DCRTPoly> &cc, CT in){
 }
 
 //SIMD encrypted search
-vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk,  vecCT &epat, vecCT &etxt, int ps) {
+vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  PublicKey<DCRTPoly> &pk,  vecCT &epat, vecCT &etxt, int ps) {
 
   int64_t p(ps);
-  DEBUG_FLAG(false);
+  OPENFHE_DEBUG_FLAG(false);
   size_t M = epat.size();
-  DEBUGEXP(M);
+  OPENFHE_DEBUGEXP(M);
   size_t N = etxt.size();
-  DEBUGEXP(N);
+  OPENFHE_DEBUGEXP(N);
   size_t i;
 
   PT dummy;
   
   size_t nrep(cc->GetRingDimension());
-  DEBUG("encrypting small ct");
+  OPENFHE_DEBUG("encrypting small ct");
   CT phct = encrypt_repeated_integer(cc, pk, 0, nrep);  // hash value for pattern
   CT thct = encrypt_repeated_integer(cc, pk, 0, nrep);  // hash value for txt
 
   CT dhct = encrypt_repeated_integer(cc, pk, d, nrep);  // d
 
-  DEBUG("encrypting hct");     
+  OPENFHE_DEBUG("encrypting hct");
   // The value of h would be "pow(d, M-1)%p"
   long h = 1;
   for (i = 0; i < M-1; i++) {
@@ -188,7 +189,7 @@ vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, 
   }
   CT hct = encrypt_repeated_integer(cc, pk, h, nrep);  // encrypted h
 
-  DEBUG("encrypting first hashes" );     
+  OPENFHE_DEBUG("encrypting first hashes" );
   // Calculate the hash value of pattern and first window of text
   for (i = 0; i < M; i++) {
     auto tmp = encMultD(cc, phct);	
@@ -200,20 +201,20 @@ vecCT encrypted_search(CryptoContext<DCRTPoly> &cc,  LPPublicKey<DCRTPoly> &pk, 
 
   vecCT eres(0);
   // Slide the pattern over text one by one
-  DEBUG("sliding" );     
+  OPENFHE_DEBUG("sliding" );
   for (i = 0; i <= N - M; i++) {
     cout<<i<< '\r'<<flush;
     
     // Check the hash values of current window of text and pattern
     // If the hash values match then only check for characters on by one
     // subtract the two hashes, zero is equality
-    DEBUG("sub" );     
+    OPENFHE_DEBUG("sub" );
     eres.push_back(cc->EvalSub(phct, thct));
       
     // Calculate hash value for next window of text: Remove leading digit,
     // add trailing digit
     if ( i < N - M ) {
-      DEBUG("rehash" );     
+      OPENFHE_DEBUG("rehash" );
       //th = (d * (th - txt[i] * h) + txt[i + M]) % p;
       auto tmp = encMultD(cc,
                 cc->EvalSub(thct,
@@ -270,14 +271,18 @@ int main()
   double sigma = 3.2;
   SecurityLevel securityLevel = HEStd_128_classic;
 
-  // Instantiate the crypto context
-  CryptoContext<DCRTPoly> cc =
-	CryptoContextFactory<DCRTPoly>::genCryptoContextBFVrns(
-		plaintextModulus, securityLevel, sigma, 0, multDepth, 0, OPTIMIZED);
+  lbcrypto::CCParams<lbcrypto::CryptoContextBFVRNS> parameters;
+  parameters.SetPlaintextModulus(plaintextModulus);
+  parameters.SetSecurityLevel(securityLevel);
+  parameters.SetStandardDeviation(sigma);
+  parameters.SetMultiplicativeDepth(multDepth);
 
-  // Enable features that you wish to use
-  cc->Enable(ENCRYPTION);
-  cc->Enable(SHE);
+  lbcrypto::CryptoContext<lbcrypto::DCRTPoly > cc = lbcrypto::GenCryptoContext(parameters);
+
+    cc->Enable(PKE);
+    cc->Enable(KEYSWITCH);
+    cc->Enable(LEVELEDSHE);
+
 
   cout<<"Step 2 - Key Generation"<<endl;
   
@@ -403,9 +408,9 @@ int main()
   vecInt foundloc(0);
   for (size_t i = 0; i < vecResult.size(); i++) {
     auto unpackedVal = vecResult[i]->GetPackedValue();
-    for (size_t j = 0; j< ringsize; j++) {
-      if (unpackedVal[j] == 0) {
-      auto loc = i + offset[j];
+    for (size_t jj = 0; jj< ringsize; jj++) {
+      if (unpackedVal[jj] == 0) {
+      auto loc = i + offset[jj];
       foundloc.push_back(loc);
       }
     }
