@@ -17,12 +17,17 @@ Source code adapted from [C++ source code published here](https://www.sanfoundry
 
 1) Install the OpenFHE library on your machine by following the [official documentation](https://openfhe-development.readthedocs.io/en/latest/sphinx_rsts/intro/installation/installation.html). Do note that the following example has not been tested on windows or macOS.
 
-2) Clone this repo to your local system
+2) Clone this repo to your local system and `cd` into it
+
+```
+git clone git@github.com:openfheorg/openfhe-integer-examples.git
+cd openfhe-integer-examples
+```
 
 3) Build this code
 
 ```
-mkdr build
+mkdir build
 cd build 
 cmake ..
 make 
