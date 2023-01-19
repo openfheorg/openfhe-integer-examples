@@ -278,6 +278,7 @@ int main()
     parameters.SetSecurityLevel(securityLevel);
     parameters.SetStandardDeviation(sigma);
     parameters.SetMultiplicativeDepth(multDepth);
+    parameters.SetMultiplicationTechnique(HPS);
 
     lbcrypto::CryptoContext<lbcrypto::DCRTPoly> cc = lbcrypto::GenCryptoContext(parameters);
 
