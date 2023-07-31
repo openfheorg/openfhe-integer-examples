@@ -278,7 +278,7 @@ int main()
     parameters.SetSecurityLevel(securityLevel);
     parameters.SetStandardDeviation(sigma);
     parameters.SetMultiplicativeDepth(multDepth);
-    parameters.SetMultiplicationTechnique(HPS);
+    parameters.SetMultiplicationTechnique(lbcrypto::HPS);
 
     lbcrypto::CryptoContext<lbcrypto::DCRTPoly> cc = lbcrypto::GenCryptoContext(parameters);
 
@@ -286,9 +286,9 @@ int main()
 
 
   // Enable features that you wish to use
-    cc->Enable(PKE);
-    cc->Enable(KEYSWITCH);
-    cc->Enable(LEVELEDSHE);
+    cc->Enable(lbcrypto::PKE);
+    cc->Enable(lbcrypto::KEYSWITCH);
+    cc->Enable(lbcrypto::LEVELEDSHE);
 
     cout<<"Step 2 - Key Generation"<<endl;
 
